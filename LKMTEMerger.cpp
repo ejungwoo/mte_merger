@@ -1,4 +1,3 @@
-#include "LKLogger.h"
 #include "LKMTEMerger.h"
 #include <stdio.h>
 #include <iostream>
