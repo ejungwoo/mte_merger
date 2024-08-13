@@ -135,7 +135,7 @@ bool LKMTEMerger::ReadMTE(TString inputFileName)
     return true;
 }
 
-void LKMTEMerger::WriteSummaryTree()
+void LKMTEMerger::WriteSummary()
 {
     fOutputFile -> cd();
     fTreeSummary = new TTree("summary","");

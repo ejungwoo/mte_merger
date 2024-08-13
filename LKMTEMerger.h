@@ -23,22 +23,18 @@ class LKMTEMerger
         LKMTEMerger(TString outputFileName);
         virtual ~LKMTEMerger() {};
 
-        void SetKeyChannel(int no, TString name);
-        void SetInputChannel(int no, TString name);
+        void SetKeyChannel  (int no, TString name); ///< Set Key channel bit number and name
+        void SetInputChannel(int no, TString name); ///< Set channel bit number and name (not key channel)
+        void GetTimeOffset  (TString fileName="data/mte_time_offset.txt"); ///< Read and store time offset data from fileName
+        void FindTimeOffset (TString fileName="data/mte_time_offset.txt"); ///< Read single source trees and find time offset between them, and save out to fileName
+        bool ReadMTE        (TString inputFileName); ///< Read MTE to create separate trees for different sources
+        bool MapKobra       (TString fileName, TString kobraName="Kobra"); ///< Read Kobra DAQ data and match time-stamp with MTE Kobra tree by matching time-diffs between events
+        void WriteSummary   (); ///< Write summary tree with entry matching data
+        bool ReadKobra      (TString fileName, TString kobraName="Kobra"); ///< Read Kobra DAQ to find matching entry of the Key source entry
 
-        bool ReadMTE(TString inputFileName);
-        bool MapKobra(TString fileName, TString kobraName="Kobra");
-
-        void GetTimeOffset (TString fileName="data/mte_time_offset.txt");
-        void FindTimeOffset(TString fileName="data/mte_time_offset.txt");
-
-        void WriteSummaryTree();
-        bool ReadKobra(TString fileName, TString kobraName="Kobra");
-
-        int GetKobraEntry(int i);
+        int GetKobraEntry(int i); ///< XXX should be written in feature
 
     public:
-        void SetOffsetFileName(TString name) { fOffsetFileName = name; }
         void SetTimeWindowFactor(double factor) { fTimeWindowFactor = factor; }
 
     private:
@@ -70,8 +66,6 @@ class LKMTEMerger
 
         TFile *fOutputFile = nullptr;
         TTree *fTreeSummary = nullptr;
-
-        TString fOffsetFileName = "data/mte_time_offset.txt";
 
 #ifndef LILAK_VERSION
     ClassDef(LKMTEMerger, 1)

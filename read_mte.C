@@ -14,7 +14,7 @@ void read_mte()
     //merger -> FindTimeOffset("data/mte_time_offset.txt");
     merger -> GetTimeOffset("data/mte_time_offset.txt");
     merger -> MapKobra("data/output00581.root");
-    merger -> WriteSummaryTree();
+    merger -> WriteSummary();
     merger -> ReadKobra("data/output00581.root");
 
     //auto koboEntry = merger -> GetKobraEntry(1);
