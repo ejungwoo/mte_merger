@@ -135,7 +135,7 @@ bool LKMTEMerger::ReadMTE(TString inputFileName)
     return true;
 }
 
-void LKMTEMerger::WriteSummary()
+void LKMTEMerger::WriteSummary(bool writeToFile)
 {
     fOutputFile -> cd();
     fTreeSummary = new TTree("summary","");
@@ -149,11 +149,9 @@ void LKMTEMerger::WriteSummary()
         fTreeSummary -> Branch(Form("daq_entry%d",iSource), &bDAQEntry[iSource]);
     }
 
-    //fMTETimeOffset[] = {0,-990.576 ,-990.464 ,1.29106e+06};
     double fTimeWindowCut = 5;
 
     for (auto key_entry=0; key_entry<fMTEEntries[fKeyChannelNumber]; ++key_entry)
-    //for (auto key_entry : {36})
     {
         fMTETree[fKeyChannelNumber] -> GetEntry(key_entry);
         bKeyNum  = bTrigNum;
@@ -187,7 +185,10 @@ void LKMTEMerger::WriteSummary()
         fTreeSummary -> Fill();
     }
 
-    fTreeSummary -> Write();
+    if (writeToFile) {
+        fOutputFile -> cd();
+        fTreeSummary -> Write();
+    }
 
     return true;
 }
@@ -252,7 +253,6 @@ void LKMTEMerger::FindTimeOffset(TString fileName)
             if (time_diff_min>time_diff)
             {
                 time_diff_min = time_diff;
-                //firstEntry[iSource] = entry;
                 timeAtMin[iSource] = bTrigTime;
             }
             else if (time_diff_min<time_diff)
@@ -268,35 +268,46 @@ void LKMTEMerger::FindTimeOffset(TString fileName)
     }
 }
 
-bool LKMTEMerger::MapKobra(TString fileName, TString kobraName)
+void LKMTEMerger::ConfigureKobraFile(TString fileName, TString kobraName)
 {
-    int iKobraTree = -1;
+    if (fKobraTree!=nullptr)
+        return;
+
     for (auto iSource : fInputChannelArray) {
         if (fInputChannelName[iSource]==kobraName) {
-            iKobraTree = iSource;
+            fIKobraTree = iSource;
             break;
         }
     }
-    if (iKobraTree<0) {
+    if (fIKobraTree<0) {
         e_error << "MTE tree for Kobra do not exist!" << endl;
         return false;
     }
 
-    auto file = new TFile(fileName,"read");
-    if (file->IsOpen()==false) {
+    fKobraFile = new TFile(fileName,"read");
+    if (fKobraFile->IsOpen()==false) {
         e_error << "Kobra file do not exist! " << fileName << endl;
         return false;
     }
     else
         e_info << "Kobra file: " << fileName << endl;
-    auto tree = (TTree*) file -> Get("midas_data");
+
+    fKobraTree = (TTree*) fKobraFile -> Get("midas_data");
+}
+
+bool LKMTEMerger::MapKobra(TString fileName, TString kobraName)
+{
+    ConfigureKobraFile(fileName, kobraName);
+
+    e_info << "Mapping Kobra entry to Cobo entry ..." << endl;
+
     int eventidT1, ref_pulse, scaler, scaler_prev;
-    tree -> SetBranchAddress("scaler",    &scaler);
+    fKobraTree -> SetBranchAddress("scaler",    &scaler);
 
     scaler_prev = INT_MAX;
-    tree -> GetEntry(5);
+    fKobraTree -> GetEntry(fTestKobraDAQEntry);
     scaler_prev = scaler;
-    tree -> GetEntry(6);
+    fKobraTree -> GetEntry(fTestKobraDAQEntry+1);
     int dscaler = scaler - scaler_prev;
 
     //cout.precision(9);
@@ -304,74 +315,62 @@ bool LKMTEMerger::MapKobra(TString fileName, TString kobraName)
     double time_prev = DBL_MAX;
     double time_diff = 0;
     int entry;
-    for (entry=0; entry<fMTEEntries[iKobraTree]; ++entry)
+    for (entry=0; entry<fMTEEntries[fIKobraTree]; ++entry)
     {
         time_prev = bTrigTime;
-        fMTETree[iKobraTree] -> GetEntry(entry);
+        fMTETree[fIKobraTree] -> GetEntry(entry);
 
         if (entry>0) {
             time_diff = (bTrigTime - time_prev)*100;
 
-            double time_window = dscaler*fTimeWindowFactor; // XXX
+            double time_window = dscaler*fMTEKobraTimeWindowFactor; // XXX
             if (abs(dscaler-time_diff)<time_window) {
-                e_test << "Matching event! entry=" << entry << ", dsacaler-time_diff=" << dscaler - time_diff << ", time-window=" << time_window << endl;
+                e_info << "Matching event! cobo-entry=" << entry << ", dsacaler-time_diff=" << dscaler - time_diff << ", time-window=" << time_window << endl;
                 break;
             }
         }
     }
 
-    fEntryOffset[iKobraTree] = 6 - entry;;
-    e_info << fInputChannelName[iKobraTree] << " " << fEntryOffset[iKobraTree] << endl;
+    fEntryOffset[fIKobraTree] = 6 - entry;
+    e_info << fInputChannelName[fIKobraTree] << " " << fEntryOffset[fIKobraTree] << endl;
 
     return true;
 }
 
-bool LKMTEMerger::ReadKobra(TString fileName, TString kobraName)
+bool LKMTEMerger::TestKobraEntry(int maxEntry)
 {
-    int iKobraTree = -1;
-    for (auto iSource : fInputChannelArray) {
-        if (fInputChannelName[iSource]==kobraName) {
-            iKobraTree = iSource;
-            break;
-        }
-    }
-    if (iKobraTree<0) {
-        e_error << "MTE tree for Kobra do not exist!" << endl;
-        return false;
-    }
-
-    //fTreeSummary -> SetBranchAddress("num" ,&bKeyNum);
-    //fTreeSummary -> SetBranchAddress("type",&bKeyType);
-    //fTreeSummary -> SetBranchAddress("time",&bKeyTime);
-    //for (auto iSource : {iKobraTree}) {
-    //    fTreeSummary -> SetBranchAddress(Form("mte_entry%d",iSource), &bMTEEntry[iSource]);
-    //    fTreeSummary -> SetBranchAddress(Form("daq_entry%d",iSource), &bDAQEntry[iSource]);
-    //}
-
-    auto fileKobra = new TFile(fileName,"read");
-    if (fileKobra->IsOpen()==false) {
-        e_error << "Kobra file do not exist! " << fileName << endl;
-        return false;
-    }
-    else
-        e_info << "Kobra file: " << fileName << endl;
-    auto treeKobra = (TTree*) fileKobra -> Get("midas_data");
     int eventidT1, ref_pulse, scaler;
-    treeKobra -> SetBranchAddress("eventidT1", &eventidT1);
-    treeKobra -> SetBranchAddress("ref_pulse", &ref_pulse);
-    treeKobra -> SetBranchAddress("scaler",    &scaler);
+    fKobraTree -> SetBranchAddress("eventidT1", &eventidT1);
+    fKobraTree -> SetBranchAddress("ref_pulse", &ref_pulse);
+    fKobraTree -> SetBranchAddress("scaler",    &scaler);
 
+    int entryKobra;
     int numSummary = fTreeSummary -> GetEntries();
-    for (int i=0; i<numSummary; ++i)
+    if (maxEntry>0 && numSummary>maxEntry)
+        numSummary = maxEntry;
+    for (int entryCobo=0; entryCobo<numSummary; ++entryCobo)
     {
-        fTreeSummary -> GetEntry(i);
-        treeKobra -> GetEntry(bDAQEntry[iKobraTree]);
+        eventidT1=0;
+        ref_pulse=0;
+        scaler=0;
+
+        fTreeSummary -> GetEntry(entryCobo);
+        entryKobra = bDAQEntry[fIKobraTree];
+        if (entryKobra<0)
+            continue;
+
+        fKobraTree -> GetEntry(entryKobra);
+        e_test << "cobo=" << entryCobo << " kobra=" << entryKobra <<  " eventidT1=" << eventidT1 << " ref_pulse=" << ref_pulse << " scaler=" << scaler << endl;
     }
     return true;
 }
 
 
-int LKMTEMerger::GetKobraEntry(int i)
+int LKMTEMerger::GetKobraEntry(int entryCobo)
 {
-    return 0;
+    fTreeSummary -> GetEntry(entryCobo);
+    auto entryKobra = bDAQEntry[fIKobraTree];
+    if (entryKobra>=0)
+        fKobraTree -> GetEntry(entryKobra);
+    return entryKobra;
 }
