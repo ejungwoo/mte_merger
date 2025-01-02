@@ -15,14 +15,13 @@ void read_mte()
     merger -> SetTestKobraDAQEntry(5);
     merger -> ReadMTE("data/lte_tag_128.dat");
 
+    if (findTOff)
+        merger -> FindTimeOffset("data/mte_time_offset.txt");
+    else
+        merger -> GetTimeOffset("data/mte_time_offset.txt");
+
     if (useKobra)
-    {
-        if (findTOff)
-            merger -> FindTimeOffset("data/mte_time_offset.txt");
-        else
-            merger -> GetTimeOffset("data/mte_time_offset.txt");
         merger -> MapKobra("data/output00581.root");
-    }
 
     merger -> WriteSummary();
 
@@ -43,3 +42,4 @@ void read_mte()
         }
     }
 }
+
