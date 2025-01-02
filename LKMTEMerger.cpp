@@ -145,8 +145,12 @@ void LKMTEMerger::WriteSummary(bool writeToFile)
     for (auto iSource : fInputChannelArray) {
         if (fKeyChannelNumber==iSource)
             continue;
-        fTreeSummary -> Branch(Form("mte_entry%d",iSource), &bMTEEntry[iSource]);
-        fTreeSummary -> Branch(Form("daq_entry%d",iSource), &bDAQEntry[iSource]);
+        //fTreeSummary -> Branch(Form("mte_entry%d",iSource), &bMTEEntry[iSource]);
+        //fTreeSummary -> Branch(Form("daq_entry%d",iSource), &bDAQEntry[iSource]);
+        //fTreeSummary -> Branch(Form("mte%d",iSource), &bMTEEntry[iSource]);
+        //fTreeSummary -> Branch(Form("daq%d",iSource), &bDAQEntry[iSource]);
+        fTreeSummary -> Branch(Form("mte_%s",fInputChannelName[iSource].Data()), &bMTEEntry[iSource]);
+        fTreeSummary -> Branch(Form("daq_%s",fInputChannelName[iSource].Data()), &bDAQEntry[iSource]);
     }
 
     double fTimeWindowCut = 5;
@@ -190,7 +194,7 @@ void LKMTEMerger::WriteSummary(bool writeToFile)
         fTreeSummary -> Write();
     }
 
-    return true;
+    //return true;
 }
 
 void LKMTEMerger::GetTimeOffset(TString fileName)
@@ -281,13 +285,13 @@ void LKMTEMerger::ConfigureKobraFile(TString fileName, TString kobraName)
     }
     if (fIKobraTree<0) {
         e_error << "MTE tree for Kobra do not exist!" << endl;
-        return false;
+        //return false;
     }
 
     fKobraFile = new TFile(fileName,"read");
     if (fKobraFile->IsOpen()==false) {
         e_error << "Kobra file do not exist! " << fileName << endl;
-        return false;
+        //return false;
     }
     else
         e_info << "Kobra file: " << fileName << endl;
